@@ -587,7 +587,7 @@ select.form-control {
   pointer-events: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.branch-switcher:hover .branch-dropdown {
+.branch-dropdown.open {
   opacity: 1;
   transform: translateY(0);
   pointer-events: all;
@@ -652,4 +652,42 @@ select.form-control {
 }
 @media (min-width: 1024px) {
   .data-table { min-width: 100%; }
+}
+
+/* ─── Mobile Enhancements ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Fix cards taking up too much space and padding */
+  .card, .stat-card {
+    padding: 16px !important;
+  }
+  /* Give the page content slightly less padding to save space */
+  .page-content {
+    padding: 12px;
+  }
+  /* Allow tables to scroll properly on mobile without breaking outer containers */
+  .table-wrap {
+    margin: 0 -12px;
+    border-radius: 0;
+    width: calc(100% + 24px);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-wrap table {
+     min-width: 600px;
+  }
+  /* Modals better fit */
+  .modal-content {
+    max-height: 85vh;
+    padding: 4px;
+  }
+  .modal-body {
+    padding: 16px;
+  }
+  /* Stats grid sizing */
+  .grid-2, .grid-3, .grid-4 {
+    gap: 12px;
+  }
+  .page-header h1 {
+    font-size: 20px;
+  }
 }
