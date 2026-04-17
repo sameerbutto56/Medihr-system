@@ -48,7 +48,7 @@ export function AppProvider({ children }) {
   const [activeModule, setActiveModule] = useState('hr')
 
   // Auth dependency
-  const { currentUser } = useAuth()
+  const { currentUser, userRole, userData } = useAuth()
 
   // ── Branch Sync ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -77,6 +77,16 @@ export function AppProvider({ children }) {
     })
     return unsub
   }, [activeBranchId])
+
+  // ── Lock non-owner users to their assigned branch ──────────────────────────
+  useEffect(() => {
+    if (userRole && userRole !== 'owner' && userData?.branchId) {
+      if (activeBranchId !== userData.branchId) {
+        setActiveBranchId(userData.branchId)
+        localStorage.setItem('activeBranchId', userData.branchId)
+      }
+    }
+  }, [userData, userRole, activeBranchId])
 
   // ── Firestore Real-time Sync ────────────────────────────────────────────────
   useEffect(() => {

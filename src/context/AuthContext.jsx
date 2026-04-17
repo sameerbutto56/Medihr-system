@@ -17,7 +17,8 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState(null); // 'owner' or other
+  const [userRole, setUserRole] = useState(null); 
+  const [userData, setUserData] = useState(null); 
   const [loading, setLoading] = useState(true);
 
   // Sign up
@@ -90,9 +91,12 @@ export function AuthProvider({ children }) {
         // Sync role
         unsubscribeDoc = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
           if (docSnap.exists()) {
-            setUserRole(docSnap.data().role);
+            const data = docSnap.data();
+            setUserData(data);
+            setUserRole(data.role);
           } else {
             console.warn("User document not found.");
+            setUserData(null);
             setUserRole(null);
           }
           setLoading(false);
@@ -102,6 +106,7 @@ export function AuthProvider({ children }) {
           setLoading(false);
         });
       } else {
+        setUserData(null);
         setUserRole(null);
         setLoading(false);
         if (unsubscribeDoc) unsubscribeDoc();
@@ -117,6 +122,7 @@ export function AuthProvider({ children }) {
   const value = {
     currentUser,
     userRole,
+    userData,
     login,
     signup,
     logout,
