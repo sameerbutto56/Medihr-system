@@ -2,7 +2,8 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   Users, ClipboardList, DollarSign, Calendar, Clock,
   Activity, FileText, LayoutDashboard, Building2,
-  Stethoscope, ChevronLeft, ChevronRight, Settings, LogOut
+  Stethoscope, ChevronLeft, ChevronRight, Settings, LogOut,
+  ShieldCheck, Menu, X
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -29,14 +30,33 @@ const EMP_NAV = [
 ]
 
 export default function Sidebar() {
-  const { sidebarOpen, setSidebarOpen, activeModule, setActiveModule } = useApp()
+  const { 
+    sidebarOpen, setSidebarOpen, 
+    activeModule, setActiveModule,
+    mobileMenuOpen, setMobileMenuOpen 
+  } = useApp()
   const { userRole } = useAuth()
   const collapsed = !sidebarOpen
   
-  const nav = userRole === 'employee' ? EMP_NAV : (activeModule === 'hr' ? HR_NAV : REHAB_NAV)
+  // Combine core nav with conditional CEO portal
+  let nav = userRole === 'employee' ? EMP_NAV : (activeModule === 'hr' ? HR_NAV : REHAB_NAV)
+  
+  if (userRole === 'owner' && activeModule === 'hr') {
+    // Insert CEO Portal before general HR Portal settings
+    const ceoItem = { to: '/hr/ceo', label: 'CEO Portal', icon: ShieldCheck }
+    if (!nav.find(i => i.to === '/hr/ceo')) {
+      nav = [nav[0], ceoItem, ...nav.slice(1)]
+    }
+  }
+
+  const handleNavClick = () => {
+    if (window.innerWidth <= 768) {
+      setMobileMenuOpen(false)
+    }
+  }
 
   return (
-    <aside className={`sidebar${collapsed ? ' collapsed' : ''}`}>
+    <aside className={`sidebar${collapsed ? ' collapsed' : ''}${mobileMenuOpen ? ' mobile-open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="logo-icon logo-icon-3d" style={{ background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: '18px' }}>
@@ -90,6 +110,7 @@ export default function Sidebar() {
             key={to}
             to={to}
             end={to === '/hr' || to === '/hospital'}
+            onClick={handleNavClick}
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
             title={collapsed ? label : undefined}
           >

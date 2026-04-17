@@ -44,6 +44,7 @@ export function AppProvider({ children }) {
 
   // ── UI State ──────────────────────────────────────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeModule, setActiveModule] = useState('hr')
 
   // Auth dependency
@@ -203,6 +204,7 @@ export function AppProvider({ children }) {
     addMedicalRecord, addInvoice, updateInvoice, deleteInvoice,
     // ui
     sidebarOpen, setSidebarOpen,
+    mobileMenuOpen, setMobileMenuOpen,
     activeModule, setActiveModule,
     // branches
     branches, activeBranchId, setActiveBranchId: (id) => {

@@ -12,6 +12,7 @@ import Employees     from './pages/hr/Employees'
 import Attendance    from './pages/hr/Attendance'
 import Payroll       from './pages/hr/Payroll'
 import HRPortal      from './pages/hr/HRPortal'
+import CEOPortal     from './pages/hr/CEOPortal'
 
 // Hospital Pages
 import HospitalDashboard from './pages/hospital/Dashboard'
@@ -53,6 +54,7 @@ export default function App() {
                     <Route path="hr/attendance" element={<Attendance />} />
                     <Route path="hr/payroll"    element={<Payroll />} />
                     <Route path="hr/portal"     element={<HRPortal />} />
+                    <Route path="hr/ceo"        element={userRole === 'owner' ? <CEOPortal /> : <Navigate to="/hr" replace />} />
 
                     {/* Hospital Module */}
                     <Route path="hospital"              element={<HospitalDashboard />} />

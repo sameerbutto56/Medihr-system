@@ -1,4 +1,4 @@
-import { Bell, Search, LogOut } from 'lucide-react'
+import { Bell, Search, LogOut, Menu } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -10,6 +10,8 @@ const TITLES = {
   '/hr/employees':         'Employees',
   '/hr/attendance':        'Attendance',
   '/hr/payroll':           'Payroll',
+  '/hr/portal':            'Employee Directory',
+  '/hr/ceo':               'CEO Management Portal',
   '/hospital':             'Rehabilitation Dashboard',
   '/hospital/patients':    'Patients',
   '/hospital/appointments':'Appointments',
@@ -20,9 +22,18 @@ export default function Navbar() {
   const { pathname } = useLocation()
   const title = TITLES[pathname] ?? 'MediHR'
   const { userRole, currentUser, logout } = useAuth()
+  const { setMobileMenuOpen } = useApp()
 
   return (
     <header className="topbar">
+      <button 
+        className="icon-btn mobile-only" 
+        style={{ marginRight: '8px' }} 
+        onClick={() => setMobileMenuOpen(true)}
+      >
+        <Menu size={20} />
+      </button>
+
       <span className="topbar-title">{title}</span>
 
       <div className="topbar-actions">
