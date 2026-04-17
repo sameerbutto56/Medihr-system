@@ -76,7 +76,7 @@ export function AppProvider({ children }) {
       }
     })
     return unsub
-  }, [activeBranchId])
+  }, [activeBranchId, currentUser])
 
   // ── Lock non-owner users to their assigned branch ──────────────────────────
   useEffect(() => {
@@ -138,7 +138,7 @@ export function AppProvider({ children }) {
       unsubEmployees(); unsubAttendance(); unsubPayroll();
       unsubPatients(); unsubAppts(); unsubTherapy(); unsubTherapyRec(); unsubRecords(); unsubInvoices();
     }
-  }, [activeBranchId])
+  }, [activeBranchId, currentUser])
 
   // ── HR Actions (Firestore) ────────────────────────────────────────────────
   const addEmployee     = useCallback((data) => addDoc(collection(db, 'employees'), { ...data, branchId: activeBranchId }), [activeBranchId])
