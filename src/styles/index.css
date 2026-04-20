@@ -454,8 +454,9 @@ tbody td { padding: 13px 16px; color: var(--text-primary); vertical-align: middl
   background: rgba(0,0,0,0.7);
   backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
+  z-index: 100000;
   padding: 20px;
+  transform: translateZ(2000px); /* Ensure it's in front of 3D transformed cards */
 }
 .modal-content {
   background: var(--bg-surface);
