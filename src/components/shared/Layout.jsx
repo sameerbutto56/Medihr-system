@@ -3,28 +3,39 @@ import Navbar from './Navbar'
 import { useApp } from '../../context/AppContext'
 import { Trash2 } from 'lucide-react'
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export default function Layout({ children }) {
   const { mobileMenuOpen, setMobileMenuOpen, showWipeModal, setShowWipeModal, factoryReset } = useApp()
   const [resetCode, setResetCode] = useState('')
   const [isWiping, setIsWiping] = useState(false)
+  const [confirmStep, setConfirmStep] = useState(0) // 0: initial, 1: double-confirm
 
   const handleFullWipe = async () => {
+    console.log("handleFullWipe START, step:", confirmStep);
     const trimmedCode = resetCode.trim()
+    
     if (trimmedCode !== '916500') {
-      alert(`Invalid security code: "${trimmedCode}"`)
+      alert(`Invalid security code.`)
       return
     }
-    if (!window.confirm("FINAL WARNING: This is IRREVERSIBLE. Are you absolutely certain?")) return
 
+    if (confirmStep === 0) {
+      console.log("Entering confirmation step 1");
+      setConfirmStep(1)
+      return
+    }
+
+    console.log("Wipe confirmed via double-click. Executing...");
     setIsWiping(true)
     try {
       const count = await factoryReset(trimmedCode)
-      alert(`FACTORY RESET COMPLETE!\n\nDeleted ${count} total records. The system will now reload.`)
+      alert(`SUCCESS! Deleted ${count} records. Reloading...`)
       window.location.reload()
     } catch (err) {
-      alert(`Wipe failed: ${err.message}`)
+      alert(`Error: ${err.message}`)
       setIsWiping(false)
+      setConfirmStep(0)
     }
   }
 
@@ -33,6 +44,7 @@ export default function Layout({ children }) {
     if (!showWipeModal) {
       setResetCode('')
       setIsWiping(false)
+      setConfirmStep(0)
     }
   }, [showWipeModal])
 
@@ -52,24 +64,28 @@ export default function Layout({ children }) {
         </main>
       </div>
 
-      {/* GLOBAL Wipe Confirmation Modal */}
-      {showWipeModal && (
-        <div className="modal-overlay" style={{ zIndex: 1000000, background: 'rgba(5, 0, 15, 0.9)', backdropFilter: 'blur(12px)' }}>
+      {/* GLOBAL Wipe Confirmation Modal - PORTALED TO BODY */}
+      {showWipeModal && createPortal(
+        <div className="modal-overlay" style={{ zIndex: 10000000, background: 'rgba(5, 0, 15, 0.9)', backdropFilter: 'blur(15px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div 
             className="modal-content" 
             style={{ 
               maxWidth: 440, 
+              width: '90%',
               textAlign: 'center', 
-              border: '1px solid rgba(239, 68, 68, 0.4)',
+              border: confirmStep === 1 ? '1px solid #fbbf24' : '1px solid rgba(239, 68, 68, 0.5)',
               background: 'linear-gradient(180deg, #1a0b3b 0%, #0a0118 100%)',
-              boxShadow: '0 25px 70px -12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(239, 68, 68, 0.2)',
-              transform: 'translateZ(2000px)'
+              boxShadow: confirmStep === 1 ? '0 40px 100px rgba(0, 0, 0, 0.9), 0 0 40px rgba(251, 191, 36, 0.2)' : '0 40px 100px rgba(0, 0, 0, 0.9), 0 0 40px rgba(239, 68, 68, 0.1)',
+              position: 'relative',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              transition: 'all 0.3s ease'
             }} 
             onClick={e => e.stopPropagation()}
           >
             <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '24px' }}>
-              <h2 className="section-title" style={{ color: '#ef4444', fontSize: '18px', fontWeight: 800, letterSpacing: '0.5px' }}>CRITICAL SYSTEM WIPE</h2>
-              <button className="toggle-btn" onClick={() => setShowWipeModal(false)} style={{ background: 'rgba(255,255,255,0.05)' }}>✕</button>
+              <h2 className="section-title" style={{ color: '#ef4444', fontSize: '18px', fontWeight: 800, letterSpacing: '0.5px', margin: 0 }}>CRITICAL SYSTEM WIPE</h2>
+              <button className="toggle-btn" onClick={() => setShowWipeModal(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
             </div>
             
             <div className="modal-body" style={{ padding: '32px 24px' }}>
@@ -115,13 +131,16 @@ export default function Layout({ children }) {
                     fontFamily: 'monospace',
                     textShadow: resetCode.trim() === '916500' ? '0 0 15px rgba(16,185,129,0.5)' : 'none',
                     transition: 'all 0.3s ease',
-                    height: '60px'
+                    height: '60px',
+                    width: '100%'
                   }}
                 />
               </div>
 
               <button 
-                className="btn" 
+                type="button"
+                id="execute-wipe-btn"
+                className="btn btn-danger" 
                 onClick={handleFullWipe}
                 disabled={isWiping || resetCode.trim() !== '916500'}
                 style={{ 
@@ -133,18 +152,30 @@ export default function Layout({ children }) {
                   fontWeight: 900,
                   textTransform: 'uppercase',
                   letterSpacing: '2px',
-                  cursor: resetCode.trim() === '916500' ? 'pointer' : 'not-allowed',
-                  background: resetCode.trim() === '916500' ? 'linear-gradient(90deg, #ef4444, #b91c1c)' : 'rgba(255,255,255,0.05)',
-                  color: resetCode.trim() === '916500' ? '#fff' : '#4b5563',
-                  boxShadow: resetCode.trim() === '916500' ? '0 15px 30px rgba(239, 68, 68, 0.4)' : 'none',
+                  cursor: (isWiping || resetCode.trim() !== '916500') ? 'not-allowed' : 'pointer',
+                  background: isWiping 
+                    ? '#4b5563' 
+                    : resetCode.trim() !== '916500' 
+                      ? 'rgba(255,255,255,0.05)' 
+                      : confirmStep === 1 
+                        ? 'linear-gradient(90deg, #fbbf24, #d97706)' 
+                        : 'linear-gradient(90deg, #ef4444, #b91c1c)',
+                  color: isWiping || resetCode.trim() !== '916500' ? '#4b5563' : '#fff',
+                  boxShadow: resetCode.trim() === '916500' ? (confirmStep === 1 ? '0 15px 30px rgba(251, 191, 36, 0.4)' : '0 15px 30px rgba(239, 68, 68, 0.4)') : 'none',
                   border: 'none',
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  pointerEvents: 'auto'
                 }}
               >
-                {isWiping ? 'DELETING SYSTEM DATA...' : 'TERMINATE ALL DATA'}
+                {isWiping 
+                  ? 'DELETING SYSTEM DATA...' 
+                  : confirmStep === 1 
+                    ? '⚠️ ARE YOU CERTAIN? CLICK AGAIN' 
+                    : 'TERMINATE ALL DATA'}
               </button>
               
               <button 
+                type="button"
                 onClick={() => setShowWipeModal(false)}
                 style={{ 
                   background: 'none', 
@@ -160,7 +191,8 @@ export default function Layout({ children }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

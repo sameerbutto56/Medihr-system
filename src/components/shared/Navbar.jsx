@@ -46,12 +46,16 @@ export default function Navbar() {
 
         {userRole === 'owner' && (
           <button 
+            id="wipe-data-trigger"
             className="icon-btn" 
             title="Wipe All Data (Factory Reset)" 
-            onClick={() => setShowWipeModal(true)}
-            style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}
+            onClick={() => {
+              console.log("Triggering Wipe Modal from Navbar...");
+              setShowWipeModal(true);
+            }}
+            style={{ color: '#fbbf24', background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.3)' }}
           >
-            <Trash2 size={16} />
+            <Trash2 size={18} />
           </button>
         )}
 
