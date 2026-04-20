@@ -4,6 +4,7 @@ import { db } from '../../firebase'
 import { collection, getDocs, writeBatch } from 'firebase/firestore'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { createPortal } from 'react-dom'
 
 function BranchManagement() {
   const { branches, addBranch, updateBranch, migrateOrphanRecords, activeBranchId } = useApp()
@@ -354,13 +355,13 @@ export default function CEOPortal() {
 
       <BranchManagement />
 
-      {/* Edit User Modal */}
-      {editingUser && (
-        <div className="modal-overlay" style={{ zIndex: 9000 }}>
-          <div className="modal-content" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+      {/* Edit User Modal - PORTALED TO BODY */}
+      {editingUser && createPortal(
+        <div className="modal-overlay" style={{ zIndex: 10000000, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
+          <div className="modal-content" style={{ maxWidth: 500, pointerEvents: 'auto' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="section-title">Edit Account: {editingUser.displayName}</h2>
-              <button className="toggle-btn" onClick={() => setEditingUser(null)}>✕</button>
+              <button type="button" className="toggle-btn" onClick={() => setEditingUser(null)}>✕</button>
             </div>
             <form onSubmit={handleUpdateAccount}>
               <div className="modal-body">
@@ -411,13 +412,14 @@ export default function CEOPortal() {
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer" style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 <button type="button" className="btn btn-ghost" onClick={() => setEditingUser(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save Changes</button>
+                <button type="submit" className="btn btn-primary" style={{ minWidth: '120px' }}>Save Changes</button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
 
