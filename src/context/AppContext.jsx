@@ -48,6 +48,8 @@ export function AppProvider({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeModule, setActiveModule] = useState('hr')
+  const [showWipeModal, setShowWipeModal] = useState(false)
+
 
   // Auth dependency
   const { currentUser, userRole, userData } = useAuth()
@@ -267,7 +269,10 @@ export function AppProvider({ children }) {
     },
     addBranch, updateBranch, migrateOrphanRecords,
     // global users
-    allUsers, updateUser, factoryReset
+    allUsers, updateUser, factoryReset,
+    // global modals
+    showWipeModal, setShowWipeModal
+
 
 
   }
