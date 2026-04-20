@@ -58,56 +58,7 @@ export default function HRPortal() {
     navigator.clipboard.writeText(id)
   }
 
-  const [showResetModal, setShowResetModal] = useState(false)
-  const [resetCode, setResetCode] = useState('')
-
-  const handleWipeData = React.useCallback(async () => {
-    if (resetCode.trim() !== '916500') {
-      alert("Invalid security code.")
-      return
-    }
-
-    console.log("Starting full system wipe via callback...");
-    
-    try {
-      const collections = [
-        'employees', 'attendance', 'payroll', 'patients', 'appointments', 
-        'therapySessions', 'therapyRecommendations', 'medicalRecords', 'invoices'
-      ];
-      
-      let totalDeleted = 0;
-      let failedCollections = [];
-      
-      for (const collName of collections) {
-        try {
-          console.log(`Wiping ${collName}...`);
-          const snap = await getDocs(collection(db, collName));
-          
-          if (!snap.empty) {
-            const batch = writeBatch(db);
-            snap.docs.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-            totalDeleted += snap.docs.length;
-            console.log(`Successfully wiped ${snap.docs.length} from ${collName}`);
-          }
-        } catch (e) {
-          console.error(`Failed to wipe ${collName}:`, e);
-          failedCollections.push(collName);
-        }
-      }
-      
-      if (failedCollections.length > 0) {
-        alert(`Partial wipe completed. ${totalDeleted} records deleted. \n\nWarning: Could not clear: ${failedCollections.join(', ')}.`);
-      } else {
-        alert(`SYSTEM WIPE COMPLETE! \n\nSuccessfully deleted ${totalDeleted} records.`);
-      }
-      
-      window.location.reload();
-    } catch (err) {
-      console.error("Critical Wipe Error:", err);
-      alert(`Critical error: ${err.message}`);
-    }
-  }, [resetCode]);
+  // Management and Developer tools moved to dedicated CEO Portal
 
   return (
     <div>

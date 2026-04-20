@@ -106,7 +106,7 @@ function BranchManagement() {
 
 function HRAccountManagement() {
   const { createSecondaryAccount } = useAuth()
-  const { branches } = useApp()
+  const { branches, addEmployee } = useApp()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [form, setForm] = useState({
@@ -131,7 +131,7 @@ function HRAccountManagement() {
     setMessage('')
     try {
       const branchName = branches.find(b => b.id === form.branchId)?.name || ''
-      await createSecondaryAccount(form.email, form.password, form.name, 'hr', {
+      const uid = await createSecondaryAccount(form.email, form.password, form.name, 'hr', {
         phone: form.phone,
         cnic: form.cnic,
         department: form.department,
@@ -139,6 +139,23 @@ function HRAccountManagement() {
         branchId: form.branchId,
         branchName
       })
+      // Also register as an employee so they appear in payroll/attendance
+      await addEmployee({
+        name: form.name,
+        loginEmail: form.email,
+        phone: form.phone,
+        cnic: form.cnic,
+        department: form.department || 'Human Resources',
+        role: form.designation || 'HR Manager',
+        authUid: uid,
+        status: 'active',
+        joined: new Date().toISOString().split('T')[0],
+        compensationType: 'salary',
+        salary: 0,
+        hrsPerDay: 8,
+        daysPerWeek: 6
+      })
+
       setMessage(`✅ Successfully registered HR account for ${form.name} (${branchName})`)
       setForm({ name: '', email: '', password: '', phone: '', cnic: '', department: '', designation: '', branchId: '' })
     } catch (err) {
@@ -230,39 +247,50 @@ function HRAccountManagement() {
 
 export default function CEOPortal() {
   const { userRole } = useAuth()
-  const [showResetModal, setShowResetModal] = useState(false)
-  const [resetCode, setResetCode] = useState('')
+  const { allUsers, updateUser, branches, hrEmployees, updateEmployee } = useApp()
+  const [editingUser, setEditingUser] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const handleOpenEdit = (user) => {
+    setEditingUser(user)
+    setEditForm({
+      displayName: user.displayName || '',
+      email: user.email || '',
+      role: user.role || 'employee',
+      branchId: user.branchId || '',
+      phone: user.phone || '',
+      department: user.department || '',
+      designation: user.designation || ''
+    })
+  }
 
-  const handleWipeData = async () => {
-    if (resetCode.trim() !== '916500') {
-      alert("Invalid security code.")
-      return
-    }
 
+  const handleUpdateAccount = async (e) => {
+    e.preventDefault()
     try {
-      const collections = [
-        'employees', 'attendance', 'payroll', 'patients', 'appointments', 
-        'therapySessions', 'therapyRecommendations', 'medicalRecords', 'invoices'
-      ];
-      
-      let totalDeleted = 0;
-      for (const collName of collections) {
-          const snap = await getDocs(collection(db, collName));
-          if (!snap.empty) {
-            const batch = writeBatch(db);
-            snap.docs.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-            totalDeleted += snap.docs.length;
-          }
+      // 1. Update Core User Account
+      await updateUser(editingUser.id, editForm)
+
+      // 2. Sync with Employee Record if it exists
+      const relatedEmployee = hrEmployees.find(emp => emp.authUid === editingUser.id)
+      if (relatedEmployee) {
+        await updateEmployee(relatedEmployee.id, {
+          name: editForm.displayName,
+          phone: editForm.phone,
+          department: editForm.department,
+          role: editForm.designation || editForm.role,
+          status: 'active'
+        })
       }
-      alert(`SYSTEM WIPE COMPLETE! \n\nSuccessfully deleted ${totalDeleted} records.`);
-      window.location.reload();
+
+      alert('Account updated successfully!')
+      setEditingUser(null)
     } catch (err) {
-      alert(`Critical error: ${err.message}`);
+      alert(`Update failed: ${err.message}`)
     }
   }
 
   if (userRole !== 'owner') {
+
     return (
       <div className="empty-state">
         <Key size={40} className="empty-icon" />
@@ -281,70 +309,117 @@ export default function CEOPortal() {
 
       <HRAccountManagement />
       
-      <BranchManagement />
+      {/* Account Management Table */}
+      <div className="mt-8 mb-8">
+        <div className="section-header">
+          <h2 className="section-title flex items-center gap-2">
+            <User size={20} className="text-primary" /> System User Management
+          </h2>
+          <p className="section-sub">Manage roles and details for all hospital staff accounts</p>
+        </div>
 
-      {/* Danger Zone */}
-      <div className="settings-section" style={{ border: '2px solid #ef4444', marginTop: '60px', padding: '30px', borderRadius: '16px', background: 'rgba(239, 68, 68, 0.08)', textAlign: 'center' }}>
-        <h3 className="section-title text-danger" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: 0, color: '#ef4444', fontSize: '20px' }}>
-          <Trash2 size={24} /> CRITICAL DANGER ZONE
-        </h3>
-        <p className="text-muted mb-6" style={{ marginTop: '8px', color: '#f87171' }}>
-          Warning: Erase the entire clinic database (Staff, Patients, Appointments, Payroll). 
-          <br />This action is irreversible and requires authorization.
-        </p>
-        
-        <button 
-          className="btn btn-danger" 
-          onClick={() => setShowResetModal(true)} 
-          style={{ 
-            padding: '12px 32px', 
-            fontSize: '16px', 
-            fontWeight: 800,
-            background: '#ef4444',
-            color: 'white',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            border: 'none',
-            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
-          }}
-        >
-          Wipe All Data Factory Reset
-        </button>
+        <div className="card overflow-hidden">
+          <table className="w-100" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg-hover)', textAlign: 'left' }}>
+                <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Name / Role</th>
+                <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Contact</th>
+                <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Branch</th>
+                <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allUsers.map(user => (
+                <tr key={user.id} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td style={{ padding: '16px' }}>
+                    <div className="fw-700">{user.displayName || 'Unnamed User'}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase' }}>{user.role}</div>
+                  </td>
+                  <td style={{ padding: '16px' }}>
+                    <div className="text-sm">{user.email}</div>
+                    <div className="text-xs text-muted">{user.phone || 'No Phone'}</div>
+                  </td>
+                  <td style={{ padding: '16px' }}>
+                    <div className="badge badge-primary">{branches.find(b => b.id === user.branchId)?.name || 'Admin / No Branch'}</div>
+                  </td>
+                  <td style={{ padding: '16px', textAlign: 'right' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => handleOpenEdit(user)}>Edit Details</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {showResetModal && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
-          <div className="modal-content" style={{ maxWidth: 400, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+      <BranchManagement />
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="modal-overlay" style={{ zIndex: 9000 }}>
+          <div className="modal-content" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="section-title text-danger">Safety Check</h2>
-              <button className="toggle-btn" onClick={() => setShowResetModal(false)}>✕</button>
+              <h2 className="section-title">Edit Account: {editingUser.displayName}</h2>
+              <button className="toggle-btn" onClick={() => setEditingUser(null)}>✕</button>
             </div>
-            <div className="modal-body">
-              <div style={{ color: 'var(--red)', fontSize: '48px', marginBottom: '16px' }}><Activity size={48} /></div>
-              <p className="mb-4">This will permanently delete ALL clinic data.</p>
-              <div className="form-group">
-                <label className="form-label">Type Security Code (916500):</label>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  value={resetCode}
-                  onChange={e => setResetCode(e.target.value)}
-                  placeholder="Enter 916500"
-                  autoFocus
-                  style={{ textAlign: 'center', fontSize: '18px', fontWeight: 800, letterSpacing: '4px' }}
-                />
+            <form onSubmit={handleUpdateAccount}>
+              <div className="modal-body">
+                <div className="grid-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label">Display Name</label>
+                    <input className="form-control" value={editForm.displayName} onChange={e => setEditForm({...editForm, displayName: e.target.value})} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input className="form-control" type="email" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} required />
+                  </div>
+                </div>
+
+                <div className="grid-2 gap-4 mt-4">
+                  <div className="form-group">
+                    <label className="form-label">Phone</label>
+                    <input className="form-control" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Role</label>
+                    <select className="form-control" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}>
+                      <option value="owner">CEO / Owner</option>
+                      <option value="hr">HR Manager</option>
+                      <option value="employee">Standard Employee</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group mt-4">
+                  <label className="form-label">Branch Assignment</label>
+                  <select className="form-control" value={editForm.branchId} onChange={e => setEditForm({...editForm, branchId: e.target.value})}>
+                    <option value="">No Specific Branch (Admin Only)</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid-2 gap-4 mt-4">
+                  <div className="form-group">
+                    <label className="form-label">Department</label>
+                    <input className="form-control" value={editForm.department} onChange={e => setEditForm({...editForm, department: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Designation</label>
+                    <input className="form-control" value={editForm.designation} onChange={e => setEditForm({...editForm, designation: e.target.value})} />
+                  </div>
+                </div>
               </div>
-              <button 
-                className="btn btn-danger w-100 mt-4" 
-                onClick={handleWipeData}
-                style={{ width: '100%', background: resetCode === '916500' ? '#ef4444' : '#334155' }}
-              >
-                Confirm Full System Wipe
-              </button>
-            </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setEditingUser(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
     </div>
+
   )
 }

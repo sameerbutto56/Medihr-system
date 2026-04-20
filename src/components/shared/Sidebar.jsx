@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext'
 
 const HR_NAV = [
   { to: '/hr',            label: 'Dashboard',  icon: LayoutDashboard },
+  { to: '/me',            label: 'My Profile', icon: ClipboardList },
   { to: '/hr/employees',  label: 'Employees',  icon: Users },
   { to: '/hr/attendance', label: 'Attendance', icon: ClipboardList },
   { to: '/hr/payroll',    label: 'Payroll',    icon: DollarSign },
@@ -18,6 +19,7 @@ const HR_NAV = [
 
 const REHAB_NAV = [
   { to: '/hospital',              label: 'Dashboard',       icon: Activity },
+  { to: '/me',                    label: 'My Profile',      icon: ClipboardList },
   { to: '/hospital/patients',     label: 'Patients',        icon: Users },
   { to: '/hospital/appointments', label: 'Appointments',    icon: Calendar },
   { to: '/hospital/therapy',      label: 'Therapy Sessions', icon: Users },

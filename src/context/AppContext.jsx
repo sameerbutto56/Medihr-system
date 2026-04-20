@@ -41,6 +41,8 @@ export function AppProvider({ children }) {
   // ── Branch State ──────────────────────────────────────────────────────────
   const [branches, setBranches] = useState([])
   const [activeBranchId, setActiveBranchId] = useState(localStorage.getItem('activeBranchId') || '')
+  const [allUsers, setAllUsers] = useState([])
+
 
   // ── UI State ──────────────────────────────────────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -140,6 +142,16 @@ export function AppProvider({ children }) {
     }
   }, [activeBranchId, currentUser])
 
+  // ── Global User Sync (Owner Only) ──────────────────────────────────────────
+  useEffect(() => {
+    if (userRole !== 'owner' || !currentUser) return
+    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+      setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    })
+    return unsub
+  }, [userRole, currentUser])
+
+
   // ── HR Actions (Firestore) ────────────────────────────────────────────────
   const addEmployee     = useCallback((data) => addDoc(collection(db, 'employees'), { ...data, branchId: activeBranchId }), [activeBranchId])
   const updateEmployee  = useCallback((id, data) => updateDoc(doc(db, 'employees', id), data), [])
@@ -169,6 +181,38 @@ export function AppProvider({ children }) {
   const updateTherapyRecommendation = useCallback((id, data) => updateDoc(doc(db, 'therapyRecommendations', id), data), [])
 
   const addMedicalRecord = useCallback((data) => addDoc(collection(db, 'medicalRecords'), { ...data, branchId: activeBranchId }), [activeBranchId])
+
+  const updateUser = useCallback(async (uid, data) => {
+    await updateDoc(doc(db, 'users', uid), data)
+  }, [])
+
+  const factoryReset = useCallback(async (code) => {
+    if (code !== '916500') throw new Error("Incorrect security code.")
+    
+    const collections = [
+      'branches', 'users', 'employees', 'attendance', 'payroll', 
+      'patients', 'appointments', 'therapySessions', 
+      'therapyRecommendations', 'medicalRecords', 'invoices'
+    ];
+    
+    let deletedCount = 0;
+    for (const collName of collections) {
+      const snap = await getDocs(collection(db, collName));
+      if (!snap.empty) {
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => {
+          // Optional: Keep current user to prevent immediate crash, though reload handles it
+          if (collName === 'users' && d.id === currentUser?.uid) return;
+          batch.delete(d.ref);
+        });
+        await batch.commit();
+        deletedCount += snap.docs.length;
+      }
+    }
+    return deletedCount;
+  }, [currentUser])
+
+
 
   // ── Branch Management ──────────────────────────────────────────────────────
   const addBranch = useCallback((name) => addDoc(collection(db, 'branches'), { name, createdAt: new Date().toISOString() }), [])
@@ -221,7 +265,11 @@ export function AppProvider({ children }) {
       setActiveBranchId(id)
       localStorage.setItem('activeBranchId', id)
     },
-    addBranch, updateBranch, migrateOrphanRecords
+    addBranch, updateBranch, migrateOrphanRecords,
+    // global users
+    allUsers, updateUser, factoryReset
+
+
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
