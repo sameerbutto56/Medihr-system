@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext'
 import StatCard from '../../components/shared/StatCard'
 import AttendanceForm from '../../components/hr/AttendanceForm'
 import AttendanceUpload from '../../components/hr/AttendanceUpload'
-import { UserCheck, UserX, Clock, Plus, Upload, X, CalendarDays, TrendingUp, Timer, CheckCircle2, ChevronRight, Pencil, ChevronLeft } from 'lucide-react'
+import { UserCheck, UserX, Clock, Plus, Upload, X, CalendarDays, TrendingUp, Timer, CheckCircle2, ChevronRight, Pencil, ChevronLeft, Search } from 'lucide-react'
 import { formatDate, formatCurrency } from '../../utils/helpers'
 import { db } from '../../firebase'
 import { collection, query, where, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore'
@@ -69,6 +69,11 @@ export default function Attendance() {
   const [showUpload, setShowUpload] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState(null)
   const [manualMarkEmp, setManualMarkEmp] = useState(null)
+  
+  // Filtering state
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('All')
+  const categories = ['All', 'Doctors', 'Therapists', 'Staff']
 
   // Month/Year filter — default to current month
   const now = new Date()
@@ -130,9 +135,31 @@ export default function Attendance() {
       })
   }, [monthAttendance, hrEmployees])
 
-  const totalPresent = employeeSummaries.reduce((s, e) => s + e.present, 0)
-  const totalAbsent = employeeSummaries.reduce((s, e) => s + e.absent, 0)
-  const totalLate = employeeSummaries.reduce((s, e) => s + e.late, 0)
+  const filteredSummaries = useMemo(() => {
+    return employeeSummaries.filter(e => {
+      const matchesSearch = [e.name, e.department, e.employeeId].some(f =>
+        (f || '').toLowerCase().includes(search.toLowerCase())
+      )
+      
+      if (category === 'All') return matchesSearch
+      
+      const roleDept = `${e.employee.role} ${e.department}`.toLowerCase()
+      if (category === 'Doctors') {
+        return matchesSearch && (roleDept.includes('doctor') || roleDept.includes('dr'))
+      }
+      if (category === 'Therapists') {
+        return matchesSearch && roleDept.includes('therapist')
+      }
+      if (category === 'Staff') {
+        return matchesSearch && !roleDept.includes('doctor') && !roleDept.includes('dr') && !roleDept.includes('therapist')
+      }
+      return matchesSearch
+    })
+  }, [employeeSummaries, search, category])
+
+  const totalPresent = filteredSummaries.reduce((s, e) => s + e.present, 0)
+  const totalAbsent = filteredSummaries.reduce((s, e) => s + e.absent, 0)
+  const totalLate = filteredSummaries.reduce((s, e) => s + e.late, 0)
 
   return (
     <div>
@@ -175,6 +202,39 @@ export default function Attendance() {
         </div>
       </div>
 
+      <div className="section-header mb-4">
+        <div className="search-bar" style={{ flex: 1 }}>
+          <Search size={15} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, department, ID…"
+          />
+        </div>
+
+        <div style={{ display: 'flex', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px', gap: '4px' }}>
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setCategory(cat)}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 500,
+                background: category === cat ? 'var(--primary)' : 'transparent',
+                color: category === cat ? 'white' : 'var(--text-muted)',
+                transition: 'all 0.2s'
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* One row per employee table */}
       <div className="table-wrap card">
         {employeeSummaries.length === 0 ? (
@@ -198,7 +258,7 @@ export default function Attendance() {
               </tr>
             </thead>
             <tbody>
-              {employeeSummaries.map(row => {
+              {filteredSummaries.map(row => {
                 const otH = Math.floor(row.totalOTMin / 60)
                 const otM = row.totalOTMin % 60
                 return (

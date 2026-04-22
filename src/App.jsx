@@ -44,8 +44,8 @@ export default function App() {
                 {/* Default redirect */}
                 <Route path="/" element={<Navigate to={userRole === 'employee' ? '/me' : '/hr'} replace />} />
 
-                {/* Employee Module */}
-                <Route path="me"            element={userRole === 'employee' ? <EmployeeDashboard /> : <Navigate to="/hr" replace />} />
+                {/* My Profile - Accessible by everyone */}
+                <Route path="me" element={<EmployeeDashboard />} />
 
                 {/* HR Module */}
                 {userRole !== 'employee' && (

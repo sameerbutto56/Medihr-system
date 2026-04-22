@@ -6,7 +6,7 @@ import { db } from '../../firebase'
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
 
 export default function EmployeeDashboard() {
-  const { currentUser } = useAuth()
+  const { currentUser, userData, userRole } = useAuth()
   const [myProfile, setMyProfile] = useState(null)
   const [myAttendance, setMyAttendance] = useState([])
   const [myPayroll, setMyPayroll] = useState([])
@@ -124,13 +124,38 @@ export default function EmployeeDashboard() {
 
   if (!myProfile) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div className="card p-6 text-center" style={{ maxWidth: '450px' }}>
-          <ShieldAlert size={48} style={{ color: 'var(--amber)', margin: '0 auto 16px' }} />
-          <h2 className="section-title" style={{ marginBottom: '8px' }}>Profile Not Linked</h2>
-          <p className="text-muted" style={{ fontSize: '14px', lineHeight: '1.6' }}>
-            Your login account has not been linked to an employee record yet. Please contact your HR manager to link your account.
-          </p>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+        <div className="page-header">
+           <h1>My Account Profile</h1>
+           <p>General account details and platform access role</p>
+        </div>
+        <div className="card p-8 mb-6" style={{ background: 'var(--brand-gradient)', color: '#fff', borderRadius: '20px', boxShadow: '0 10px 25px rgba(99,102,241,0.2)' }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 800 }}>
+                 {userData?.displayName?.charAt(0) || userData?.email?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+              <div>
+                 <h2 style={{ margin: 0, fontSize: '28px', color: 'white' }}>{userData?.displayName || 'User Account'}</h2>
+                 <p style={{ opacity: 0.9, fontSize: '16px', color: 'white', margin: '4px 0' }}>{userData?.email}</p>
+                 <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 12px', background: 'rgba(255,255,255,0.2)', borderRadius: '20px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Platform Role: {userRole}
+                 </span>
+              </div>
+           </div>
+        </div>
+        
+        <div className="card p-6">
+           <h3 className="section-title text-sm mb-4">Identity & Synchronization</h3>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'var(--bg-hover)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <ShieldAlert className="text-amber" size={24} />
+              <div>
+                 <div style={{ fontWeight: 700, fontSize: '14px' }}>HR Record Not Linked</div>
+                 <div className="text-xs text-muted" style={{ lineHeight: '1.5', marginTop: '4px' }}>
+                    Your account is currently assigned as <strong>{userRole?.toUpperCase()}</strong>. 
+                    You can manage the system, but you do not have an employee record for tracking attendance or payroll.
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
     )
