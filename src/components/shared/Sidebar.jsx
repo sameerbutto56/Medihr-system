@@ -43,6 +43,15 @@ export default function Sidebar() {
   // Combine core nav with conditional CEO portal
   let nav = userRole === 'employee' ? EMP_NAV : (activeModule === 'hr' ? HR_NAV : REHAB_NAV)
   
+  const { userData } = useAuth()
+  if (userData?.isManager) {
+    const managerItem = { to: '/hr/manager', label: 'Manager Portal', icon: ClipboardList }
+    if (!nav.find(i => i.to === '/hr/manager')) {
+      // Find dashboard index or insert at top
+      nav = [nav[0], managerItem, ...nav.slice(1)]
+    }
+  }
+
   if (userRole === 'owner' && activeModule === 'hr') {
     // Insert CEO Portal before general HR Portal settings
     const ceoItem = { to: '/hr/ceo', label: 'CEO Portal', icon: ShieldCheck }

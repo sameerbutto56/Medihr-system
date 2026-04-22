@@ -1,6 +1,6 @@
 import { X, AlertCircle } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
-import FunnyButton from '../shared/FunnyButton'
+// import Removed FunnyButton
 import { findScheduleConflict } from '../../utils/conflicts'
 
 export default function AppointmentForm({ onClose }) {
@@ -287,7 +287,7 @@ export default function AppointmentForm({ onClose }) {
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <FunnyButton label="Schedule" isFormValid={isFormValid} />
+            <button type="submit" className="btn btn-primary" disabled={!isFormValid}>Schedule</button>
           </div>
         </form>
       </div>

@@ -37,6 +37,8 @@ export function AppProvider({ children }) {
   const [hosInvoices, setHosInvoices] = useState([])
   const [hosTherapyRecommendations, setHosTherapyRecommendations] = useState([])
   const [hosMedicalRecords, setHosMedicalRecords] = useState([])
+  const [hrDepartments, setHrDepartments] = useState([])
+  const [hrTasks, setHrTasks] = useState([])
   
   // ── Branch State ──────────────────────────────────────────────────────────
   const [branches, setBranches] = useState([])
@@ -99,7 +101,7 @@ export function AppProvider({ children }) {
     const q = (coll) => query(collection(db, coll), where('branchId', '==', activeBranchId))
 
     // HR Collections
-    const unsubEmployees  = onSnapshot(query(collection(db, 'employees'), where('branchId', '==', activeBranchId), orderBy('name')), 
+    const unsubEmployees  = onSnapshot(query(collection(db, 'employees'), where('branchId', '==', activeBranchId)), 
       (snap) => setHrEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       (err) => console.error("Employees sync error:", err)
     )
@@ -113,7 +115,7 @@ export function AppProvider({ children }) {
     )
 
     // Hospital Collections
-    const unsubPatients   = onSnapshot(query(collection(db, 'patients'), where('branchId', '==', activeBranchId), orderBy('name')), 
+    const unsubPatients   = onSnapshot(query(collection(db, 'patients'), where('branchId', '==', activeBranchId)), 
       (snap) => setHosPatients(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       (err) => console.error("Patients sync error:", err)
     )
@@ -137,10 +139,19 @@ export function AppProvider({ children }) {
       (snap) => setHosMedicalRecords(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       (err) => console.error("Medical records sync error:", err)
     )
+    const unsubDepts      = onSnapshot(q('departments'), 
+      (snap) => setHrDepartments(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      (err) => console.error("Departments sync error:", err)
+    )
+    const unsubTasks      = onSnapshot(q('tasks'), 
+      (snap) => setHrTasks(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      (err) => console.error("Tasks sync error:", err)
+    )
 
     return () => {
       unsubEmployees(); unsubAttendance(); unsubPayroll();
       unsubPatients(); unsubAppts(); unsubTherapy(); unsubTherapyRec(); unsubRecords(); unsubInvoices();
+      unsubDepts(); unsubTasks();
     }
   }, [activeBranchId, currentUser])
 
@@ -162,6 +173,25 @@ export function AppProvider({ children }) {
   const updateAttendance = useCallback((id, data) => updateDoc(doc(db, 'attendance', id), data), [])
   const addPayroll      = useCallback((data) => addDoc(collection(db, 'payroll'), { ...data, branchId: activeBranchId }), [activeBranchId])
   const updatePayroll   = useCallback((id, data) => updateDoc(doc(db, 'payroll', id), data), [])
+
+  const addDepartment    = useCallback((data) => addDoc(collection(db, 'departments'), { ...data, branchId: activeBranchId }), [activeBranchId])
+  const updateDepartment = useCallback((id, data) => updateDoc(doc(db, 'departments', id), data), [])
+  const deleteDepartment = useCallback((id) => deleteDoc(doc(db, 'departments', id)), [])
+
+  const addTask    = useCallback((data) => addDoc(collection(db, 'tasks'), { ...data, branchId: activeBranchId, status: 'pending', createdAt: new Date().toISOString() }), [activeBranchId])
+  const updateTask = useCallback((id, data) => updateDoc(doc(db, 'tasks', id), data), [])
+  const deleteTask = useCallback((id) => deleteDoc(doc(db, 'tasks', id)), [])
+
+  const promoteToManager = useCallback(async (empId, deptId) => {
+    // 1. Update Employee record
+    await updateDoc(doc(db, 'employees', empId), { isManager: true, managedDepartmentId: deptId })
+    // 2. Optionally update User record role if needed, but we rely on employee flags for now
+  }, [])
+
+  const assignToTeam = useCallback(async (empId, managerId) => {
+    // Check if already assigned (safety check)
+    await updateDoc(doc(db, 'employees', empId), { managerId })
+  }, [])
 
   // ── Hospital Actions (Firestore) ──────────────────────────────────────────
   const addPatient    = useCallback((data) => addDoc(collection(db, 'patients'), { ...data, branchId: activeBranchId }), [activeBranchId])
@@ -258,6 +288,9 @@ export function AppProvider({ children }) {
     addAppointment, updateAppointment,
     addTherapySession, updateTherapySession, deleteTherapySession, addTherapyRecommendation, updateTherapyRecommendation,
     addMedicalRecord, addInvoice, updateInvoice, deleteInvoice,
+    // departments & tasks
+    hrDepartments, hrTasks, addDepartment, updateDepartment, deleteDepartment,
+    addTask, updateTask, deleteTask, promoteToManager, assignToTeam,
     // ui
     sidebarOpen, setSidebarOpen,
     mobileMenuOpen, setMobileMenuOpen,

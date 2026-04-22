@@ -456,7 +456,6 @@ tbody td { padding: 13px 16px; color: var(--text-primary); vertical-align: middl
   display: flex; align-items: center; justify-content: center;
   z-index: 100000;
   padding: 20px;
-  transform: translateZ(2000px); /* Ensure it's in front of 3D transformed cards */
 }
 .modal-content {
   background: var(--bg-surface);
@@ -526,13 +525,13 @@ select.form-control {
 }
 
 .perspective-content {
-  animation: content-entrance 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: content-entrance 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   transform-origin: center top;
 }
 
 @keyframes content-entrance {
   from { opacity: 0; transform: perspective(2000px) translateZ(-100px) rotateX(5deg); }
-  to   { opacity: 1; transform: perspective(2000px) translateZ(0) rotateX(0); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* Page transitions */

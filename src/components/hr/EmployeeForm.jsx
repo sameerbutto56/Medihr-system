@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Copy, Fingerprint, CheckCircle2, FileText } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { bufferToBase64, generateChallenge } from '../../utils/webauthn'
-import FunnyButton from '../shared/FunnyButton'
 
 function generateEmployeeId(existingEmployees) {
   let maxNum = 0
@@ -19,7 +19,7 @@ function generateEmployeeId(existingEmployees) {
 }
 
 export default function EmployeeForm({ employee, onClose }) {
-  const { addEmployee, updateEmployee, hrEmployees } = useApp()
+  const { addEmployee, updateEmployee, hrEmployees, hrDepartments } = useApp()
   const isEdit = !!employee
 
   const generatedId = useMemo(() => generateEmployeeId(hrEmployees), [hrEmployees])
@@ -49,6 +49,7 @@ export default function EmployeeForm({ employee, onClose }) {
   // We need auth context for secondary account creation
   const { createSecondaryAccount } = useAuth()
   const [isCreatingAuth, setIsCreatingAuth] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('idle')
 
   const [biometricStatus, setBiometricStatus] = useState('idle')
 
@@ -66,33 +67,34 @@ export default function EmployeeForm({ employee, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsCreatingAuth(true)
+    setSaveStatus('saving')
     try {
       let uid = null;
 
-      // Handle Firebase Auth creation if not editing, or if editing and credentials provided
-      if (!isEdit || (formData.loginEmail && formData.loginPassword)) {
-        if (formData.loginEmail && formData.loginPassword) {
-           uid = await createSecondaryAccount(formData.loginEmail, formData.loginPassword, formData.name, 'employee')
-        }
+      // Handle Firebase Auth creation only if the employee doesn't already have an account
+      if (!employee?.authUid && formData.loginEmail && formData.loginPassword) {
+         uid = await createSecondaryAccount(formData.loginEmail, formData.loginPassword, formData.name, 'employee')
       }
 
       const payload = {
-        name: formData.name,
-        phone: formData.phone,
-        department: formData.department,
-        role: formData.role,
-        compensationType: formData.compensationType,
-        dob: formData.dob,
-        joined: formData.joined,
-        status: formData.status,
-        cnic: formData.cnic,
-        biometricCredentialId: formData.biometricCredentialId,
+        name: formData.name || '',
+        phone: formData.phone || '',
+        department: formData.department || '',
+        role: formData.role || '',
+        compensationType: formData.compensationType || 'salary',
+        dob: formData.dob || '',
+        joined: formData.joined || '',
+        status: formData.status || 'active',
+        cnic: formData.cnic || '',
+        biometricCredentialId: formData.biometricCredentialId || null,
         employeeId: formData.employeeId || generatedId,
         salary: formData.compensationType === 'salary' ? Number(formData.salary) : 0,
         dailyRate: formData.compensationType === 'dailyRate' ? Number(formData.dailyRate) : 0,
         percentageRate: formData.compensationType === 'percentage' ? Number(formData.percentageRate) : 0,
-        hrsPerDay: Number(formData.hrsPerDay),
-        daysPerWeek: Number(formData.daysPerWeek)
+        hrsPerDay: Number(formData.hrsPerDay) || 8,
+        daysPerWeek: Number(formData.daysPerWeek) || 5,
+        loginEmail: formData.loginEmail || '',
+        loginPassword: formData.loginPassword || ''
       }
 
       if (uid) {
@@ -104,11 +106,14 @@ export default function EmployeeForm({ employee, onClose }) {
       } else {
         await addEmployee(payload)
       }
-      onClose()
+      setSaveStatus('success')
+      setTimeout(() => {
+        onClose()
+      }, 1500)
     } catch (err) {
       console.error('Error saving employee:', err)
       alert(`Failed to save employee: ${err.message}`)
-    } finally {
+      setSaveStatus('error')
       setIsCreatingAuth(false)
     }
   }
@@ -167,15 +172,14 @@ export default function EmployeeForm({ employee, onClose }) {
     formData.cnic && 
     formData.department && 
     formData.role &&
-    formData.dob &&
     formData.joined &&
-    (formData.compensationType === 'salary' ? formData.salary : 
-     formData.compensationType === 'dailyRate' ? formData.dailyRate : 
-     formData.percentageRate)
+    (formData.compensationType === 'salary' ? formData.salary !== '' : 
+     formData.compensationType === 'dailyRate' ? formData.dailyRate !== '' : 
+     formData.percentageRate !== '')
   )
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 10000000 }}>
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '650px' }}>
         <div className="modal-header">
           <h2 className="section-title">{isEdit ? 'Edit Employee' : 'Add New Employee'}</h2>
@@ -222,7 +226,19 @@ export default function EmployeeForm({ employee, onClose }) {
               </div>
               <div className="form-group">
                 <label className="form-label">Department</label>
-                <input type="text" name="department" required className="form-control" value={formData.department} onChange={handleChange} />
+                <select 
+                  name="department" required className="form-control" 
+                  value={formData.department} onChange={handleChange}
+                >
+                  <option value="">-- Select Department --</option>
+                  {hrDepartments.map(d => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                  {!hrDepartments.find(d => d.name === formData.department) && formData.department && (
+                    <option value={formData.department}>{formData.department}</option>
+                  )}
+                </select>
+                {hrDepartments.length === 0 && <p className="text-xs text-muted mt-1">No departments created by CEO yet.</p>}
               </div>
             </div>
 
@@ -324,7 +340,7 @@ export default function EmployeeForm({ employee, onClose }) {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Date of Birth</label>
-                <input type="date" name="dob" required className="form-control" value={formData.dob} onChange={handleChange} />
+                <input type="date" name="dob" className="form-control" value={formData.dob} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="form-label">Join Date</label>
@@ -333,14 +349,21 @@ export default function EmployeeForm({ employee, onClose }) {
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={isCreatingAuth}>Cancel</button>
-            <FunnyButton 
-              label={isCreatingAuth ? 'Saving...' : (isEdit ? 'Save Changes' : 'Register Employee')}
-              isFormValid={isFormValid && !isCreatingAuth}
-            />
+            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={isCreatingAuth || saveStatus === 'success'}>Cancel</button>
+            <button 
+              type="submit" 
+              className={`btn ${saveStatus === 'success' ? 'btn-success' : 'btn-primary'}`} 
+              disabled={!isFormValid || isCreatingAuth || saveStatus === 'success'}
+              style={saveStatus === 'success' ? { background: 'var(--green)', color: '#fff', borderColor: 'var(--green)' } : {}}
+            >
+              {saveStatus === 'saving' ? 'Saving...' : 
+               saveStatus === 'success' ? 'Saved Successfully! ✓' : 
+               (isEdit ? 'Save Changes' : 'Register Employee')}
+            </button>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

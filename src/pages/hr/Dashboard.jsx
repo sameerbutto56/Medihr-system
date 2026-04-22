@@ -53,10 +53,10 @@ export default function HRDashboard() {
       </div>
 
       <div className="grid-4 mb-4">
-        <StatCard label="Total Employees" value={stats.total}  sub={`${stats.active} active`}  icon={Users}     color="indigo" />
-        <StatCard label="Present Today"   value={stats.present} sub={`of ${stats.active} active`} icon={UserCheck} color="green"  />
-        <StatCard label="Disbursed Total" value={formatCurrency(stats.completedNet)} sub="complete payroll" icon={DollarSign} color="cyan"   />
-        <StatCard label="Pending Payroll" value={stats.pending} sub="this month"  icon={Clock}     color="amber"  />
+        <StatCard label="Total Employees" value={stats.total}  sub={`${stats.active} active`}  icon={Users}     color="indigo" to="/hr/employees" />
+        <StatCard label="Present Today"   value={stats.present} sub={`of ${stats.active} active`} icon={UserCheck} color="green"  to="/hr/attendance" />
+        <StatCard label="Disbursed Total" value={formatCurrency(stats.completedNet)} sub="complete payroll" icon={DollarSign} color="cyan"   to="/hr/payroll" />
+        <StatCard label="Pending Payroll" value={stats.pending} sub="this month"  icon={Clock}     color="amber"  to="/hr/payroll" />
       </div>
 
       <div className="grid-2 mt-6">

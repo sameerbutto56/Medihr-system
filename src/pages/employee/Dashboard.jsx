@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { Calendar, DollarSign, Clock, ShieldAlert, TrendingUp, CheckCircle2, XCircle, AlertTriangle, Briefcase, Timer } from 'lucide-react'
-import { formatCurrency } from '../../utils/helpers'
+import { Calendar, DollarSign, Clock, ShieldAlert, TrendingUp, CheckCircle2, XCircle, AlertTriangle, Briefcase, Timer, ClipboardList } from 'lucide-react'
+import { formatCurrency, formatDate } from '../../utils/helpers'
 import { db } from '../../firebase'
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
 
@@ -10,6 +10,7 @@ export default function EmployeeDashboard() {
   const [myProfile, setMyProfile] = useState(null)
   const [myAttendance, setMyAttendance] = useState([])
   const [myPayroll, setMyPayroll] = useState([])
+  const [myTasks, setMyTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [checkingIn, setCheckingIn] = useState(false)
 
@@ -45,9 +46,15 @@ export default function EmployeeDashboard() {
       setMyPayroll(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     })
 
+    const qTasks = query(collection(db, 'tasks'), where('assignedTo', '==', currentUser.uid))
+    const unsubTasks = onSnapshot(qTasks, (snap) => {
+      setMyTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    })
+
     return () => {
       unsubAtt()
       unsubPay()
+      unsubTasks()
     }
   }, [myProfile])
 
@@ -101,6 +108,14 @@ export default function EmployeeDashboard() {
       alert("Failed to mark attendance")
     }
     setCheckingIn(false)
+  }
+
+  const handleUpdateTaskStatus = async (taskId, newStatus) => {
+    try {
+      await updateDoc(doc(db, 'tasks', taskId), { status: newStatus })
+    } catch (err) {
+      console.error("Error updating task status:", err)
+    }
   }
 
   if (loading) {
@@ -204,6 +219,49 @@ export default function EmployeeDashboard() {
           <div className="stat-value">{stats.attendanceRate}%</div>
           <div className="stat-label">Attendance Rate</div>
         </div>
+      </div>
+      
+      {/* My Assigned Tasks Section */}
+      <div className="card p-6 mb-8">
+        <h3 className="section-title mb-4 flex items-center gap-2">
+          <ClipboardList size={18} className="text-primary" /> My Assigned Tasks
+        </h3>
+        {myTasks.length === 0 ? (
+          <div className="text-center p-6 bg-hover rounded-xl border border-dashed border-border">
+            <ClipboardList size={32} className="text-muted mb-2 opacity-30" />
+            <p className="text-sm text-muted">You have no tasks assigned to you.</p>
+          </div>
+        ) : (
+          <div className="grid-2 gap-4">
+            {myTasks.map(t => (
+              <div key={t.id} className="p-4 bg-hover rounded-xl border border-border shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <div style={{ fontWeight: 700, fontSize: '15px' }}>{t.title}</div>
+                    <span className={`badge ${t.status === 'completed' ? 'active' : 'warning'}`}>
+                      {t.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted mb-3 line-clamp-2">{t.description}</p>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-border mt-2">
+                  <div className="text-xs text-muted flex items-center gap-1">
+                    <Calendar size={12} /> Due: {formatDate(t.dueDate)}
+                  </div>
+                  {t.status !== 'completed' && (
+                    <button 
+                      className="btn btn-primary btn-sm" 
+                      style={{ fontSize: '11px', padding: '4px 10px' }}
+                      onClick={() => handleUpdateTaskStatus(t.id, 'completed')}
+                    >
+                      Mark as Done
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Analytics Summary Cards */}

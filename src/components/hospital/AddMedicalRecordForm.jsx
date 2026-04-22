@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X, Save, FileText, Clipboard, Activity, FlaskConical, Stethoscope } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
-import FunnyButton from '../shared/FunnyButton'
+// import Removed FunnyButton
 
 const RECORD_TYPES = [
   { label: 'Diagnosis', icon: Stethoscope, color: 'indigo' },
@@ -175,7 +175,7 @@ export default function AddMedicalRecordForm({ onClose, prefilledPatientId = '' 
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <FunnyButton label="Save Record" isFormValid={isFormValid} />
+            <button type="submit" className="btn btn-primary" disabled={!isFormValid}>Save Record</button>
           </div>
         </form>
       </div>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { X, Copy } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
-import FunnyButton from '../shared/FunnyButton'
+// import Removed FunnyButton
 
 function generatePatientId(existingPatients) {
   let maxNum = 0
@@ -150,7 +150,7 @@ export default function PatientForm({ onClose }) {
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <FunnyButton label="Save Patient" isFormValid={isFormValid} />
+            <button type="submit" className="btn btn-primary" disabled={!isFormValid}>Save Patient</button>
           </div>
         </form>
       </div>

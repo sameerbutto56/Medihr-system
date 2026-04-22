@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { User, Activity, MapPin, RefreshCw, Plus, Trash2, Key } from 'lucide-react'
+import { User, Activity, MapPin, RefreshCw, Plus, Trash2, Key, ShieldCheck } from 'lucide-react'
 import { db } from '../../firebase'
 import { collection, getDocs, writeBatch } from 'firebase/firestore'
 import { useApp } from '../../context/AppContext'
@@ -99,6 +99,192 @@ function BranchManagement() {
           >
             {isMigrating ? 'Migrating...' : 'Migrate Orphan Data to This Branch'}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DepartmentManagement() {
+  const { hrDepartments, addDepartment, updateDepartment, deleteDepartment } = useApp()
+  const [newName, setNewName] = useState('')
+  const [newDesc, setNewDesc] = useState('')
+  const [editing, setEditing] = useState(null)
+
+  const handleAdd = async (e) => {
+    e.preventDefault()
+    if (!newName.trim()) return
+    await addDepartment({ name: newName, description: newDesc })
+    setNewName('')
+    setNewDesc('')
+  }
+
+  const handleUpdate = async (e) => {
+    e.preventDefault()
+    if (!editing.name.trim()) return
+    await updateDepartment(editing.id, { name: editing.name, description: editing.description })
+    setEditing(null)
+  }
+
+  return (
+    <div className="mt-8 mb-8">
+      <div className="section-header">
+        <h2 className="section-title flex items-center gap-2">
+          <Activity size={20} className="text-primary" /> Department Management
+        </h2>
+        <p className="section-sub">Create and manage flexible departments for your clinic</p>
+      </div>
+
+      <div className="grid-2 gap-6">
+        <div className="card p-6">
+          <h3 className="text-sm font-bold mb-4">Active Departments</h3>
+          <div className="flex flex-col gap-3">
+            {hrDepartments.length === 0 ? (
+              <p className="text-xs text-muted">No departments created yet.</p>
+            ) : (
+              hrDepartments.map(d => (
+                <div key={d.id} className="flex items-center justify-between p-3 bg-hover rounded-lg border border-border">
+                  <div>
+                    <div className="fw-600">{d.name}</div>
+                    <div className="text-xs text-muted">{d.description || 'No description'}</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditing(d)}>Edit</button>
+                    <button className="btn btn-ghost btn-sm text-danger" onClick={() => deleteDepartment(d.id)}><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="card p-6">
+          <h3 className="text-sm font-bold mb-4">{editing ? 'Edit Department' : 'Create Department'}</h3>
+          <form onSubmit={editing ? handleUpdate : handleAdd} className="flex flex-col gap-3">
+            <div className="form-group">
+              <label className="form-label">Department Name</label>
+              <input 
+                className="form-control" 
+                value={editing ? editing.name : newName} 
+                onChange={e => editing ? setEditing({...editing, name: e.target.value}) : setNewName(e.target.value)} 
+                placeholder="e.g. Surgery"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Description (Optional)</label>
+              <input 
+                className="form-control" 
+                value={editing ? editing.description : newDesc} 
+                onChange={e => editing ? setEditing({...editing, description: e.target.value}) : setNewDesc(e.target.value)} 
+                placeholder="Brief purpose..."
+              />
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button type="submit" className="btn btn-primary w-100" style={{ flex: 1, justifyContent: 'center' }}>
+                {editing ? 'Save Changes' : 'Create Department'}
+              </button>
+              {editing && <button type="button" className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel</button>}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ManagerManagement() {
+  const { hrEmployees, hrDepartments, promoteToManager } = useApp()
+  const [selectedEmp, setSelectedEmp] = useState('')
+  const [selectedDept, setSelectedDept] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handlePromote = async (e) => {
+    e.preventDefault()
+    if (!selectedEmp || !selectedDept) return
+    setLoading(true)
+    try {
+      await promoteToManager(selectedEmp, selectedDept)
+      alert("Employee successfully promoted to Manager!")
+      setSelectedEmp('')
+      setSelectedDept('')
+    } catch (err) {
+      alert("Promotion failed: " + err.message)
+    }
+    setLoading(false)
+  }
+
+  const managerList = hrEmployees.filter(e => e.isManager)
+
+  return (
+    <div className="mt-8 mb-8">
+      <div className="section-header">
+        <h2 className="section-title flex items-center gap-2">
+          <ShieldCheck size={20} className="text-primary" /> Manager Assignment
+        </h2>
+        <p className="section-sub">Appoint employee as a manager for a specific department</p>
+      </div>
+
+      <div className="grid-2 gap-6">
+        <div className="card p-6">
+          <h3 className="text-sm font-bold mb-4">Promote Employee to Manager</h3>
+          <form onSubmit={handlePromote} className="space-y-4">
+            <div className="form-group">
+              <label className="form-label">Select Employee</label>
+              <select 
+                className="form-control" 
+                value={selectedEmp} 
+                onChange={e => setSelectedEmp(e.target.value)}
+                required
+              >
+                <option value="">-- Select Employee --</option>
+                {hrEmployees.filter(e => !e.isManager).map(e => (
+                  <option key={e.id} value={e.id}>{e.name} ({e.role})</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group mt-3">
+              <label className="form-label">Assign to Department</label>
+              <select 
+                className="form-control" 
+                value={selectedDept} 
+                onChange={e => setSelectedDept(e.target.value)}
+                required
+              >
+                <option value="">-- Select Department --</option>
+                {hrDepartments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+            <button type="submit" className="btn btn-primary w-100 mt-4" style={{ width: '100%', justifyContent: 'center' }} disabled={loading || !selectedEmp || !selectedDept}>
+              {loading ? 'Processing...' : 'Appoint as Manager'}
+            </button>
+          </form>
+        </div>
+
+        <div className="card p-6">
+          <h3 className="text-sm font-bold mb-4">Active Managers</h3>
+          <div className="flex flex-col gap-3">
+            {managerList.length === 0 ? (
+              <p className="text-xs text-muted">No managers appointed yet.</p>
+            ) : (
+              managerList.map(m => {
+                const dept = hrDepartments.find(d => d.id === m.managedDepartmentId)
+                return (
+                  <div key={m.id} className="flex items-center gap-3 p-3 bg-hover rounded-lg border border-border">
+                    <div className="avatar" style={{ width: 34, height: 34, fontSize: 13 }}>
+                      {m.name.split(' ').map(n=>n[0]).join('').toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="fw-700">{m.name}</div>
+                      <div className="text-xs text-primary fw-800">MANAGER: {dept?.name || 'Unknown Dept'}</div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -309,6 +495,10 @@ export default function CEOPortal() {
       </div>
 
       <HRAccountManagement />
+      
+      <DepartmentManagement />
+      
+      <ManagerManagement />
       
       {/* Account Management Table */}
       <div className="mt-8 mb-8">
