@@ -35,14 +35,14 @@ export default function App() {
   return (
     <>
       <Routes>
-        <Route path="/auth" element={!currentUser ? <AuthPage /> : <Navigate to={userRole === 'employee' ? '/me' : '/hr'} replace />} />
+        <Route path="/auth" element={!currentUser ? <AuthPage /> : <Navigate to={userRole === 'employee' ? '/me' : (userRole === 'manager' ? '/hr/manager' : '/hr')} replace />} />
         
         <Route path="/*" element={
           <ProtectedRoute>
             <Layout>
               <Routes>
                 {/* Default redirect */}
-                <Route path="/" element={<Navigate to={userRole === 'employee' ? '/me' : '/hr'} replace />} />
+                <Route path="/" element={<Navigate to={userRole === 'employee' ? '/me' : (userRole === 'manager' ? '/hr/manager' : '/hr')} replace />} />
 
                 {/* My Profile - Accessible by everyone */}
                 <Route path="me" element={<EmployeeDashboard />} />

@@ -28,13 +28,16 @@ export default function Employees() {
     if (category === 'Therapists') {
       return matchesSearch && roleDept.includes('therapist')
     }
+    if (category === 'Managers') {
+      return matchesSearch && e.isManager
+    }
     if (category === 'Staff') {
-      return matchesSearch && !roleDept.includes('doctor') && !roleDept.includes('dr') && !roleDept.includes('therapist')
+      return matchesSearch && !roleDept.includes('doctor') && !roleDept.includes('dr') && !roleDept.includes('therapist') && !e.isManager
     }
     return matchesSearch
   })
 
-  const categories = ['All', 'Doctors', 'Therapists', 'Staff']
+  const categories = ['All', 'Managers', 'Doctors', 'Therapists', 'Staff']
 
   const handleEdit = (emp) => {
     setSelectedEmployee(emp)

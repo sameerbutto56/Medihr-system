@@ -19,7 +19,7 @@ function generateEmployeeId(existingEmployees) {
 }
 
 export default function EmployeeForm({ employee, onClose }) {
-  const { addEmployee, updateEmployee, hrEmployees, hrDepartments } = useApp()
+  const { addEmployee, updateEmployee, hrEmployees, hrDepartments, activeBranchId } = useApp()
   const isEdit = !!employee
 
   const generatedId = useMemo(() => generateEmployeeId(hrEmployees), [hrEmployees])
@@ -73,7 +73,7 @@ export default function EmployeeForm({ employee, onClose }) {
 
       // Handle Firebase Auth creation only if the employee doesn't already have an account
       if (!employee?.authUid && formData.loginEmail && formData.loginPassword) {
-         uid = await createSecondaryAccount(formData.loginEmail, formData.loginPassword, formData.name, 'employee')
+         uid = await createSecondaryAccount(formData.loginEmail, formData.loginPassword, formData.name, 'employee', { branchId: activeBranchId }) 
       }
 
       const payload = {

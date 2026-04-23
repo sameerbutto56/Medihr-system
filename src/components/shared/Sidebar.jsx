@@ -31,6 +31,11 @@ const EMP_NAV = [
   { to: '/me', label: 'My Dashboard', icon: LayoutDashboard },
 ]
 
+const MANAGER_NAV = [
+  { to: '/hr/manager', label: 'Manager Portal', icon: ClipboardList },
+  { to: '/me',         label: 'My Profile',     icon: Users },
+]
+
 export default function Sidebar() {
   const { 
     sidebarOpen, setSidebarOpen, 
@@ -41,17 +46,15 @@ export default function Sidebar() {
   const collapsed = !sidebarOpen
   
   // Combine core nav with conditional CEO portal
-  let nav = userRole === 'employee' ? EMP_NAV : (activeModule === 'hr' ? HR_NAV : REHAB_NAV)
-  
-  const { userData } = useAuth()
-  if (userData?.isManager) {
-    const managerItem = { to: '/hr/manager', label: 'Manager Portal', icon: ClipboardList }
-    if (!nav.find(i => i.to === '/hr/manager')) {
-      // Find dashboard index or insert at top
-      nav = [nav[0], managerItem, ...nav.slice(1)]
-    }
+  let nav = []
+  if (userRole === 'employee') {
+    nav = EMP_NAV
+  } else if (userRole === 'manager') {
+    nav = MANAGER_NAV
+  } else {
+    nav = (activeModule === 'hr' ? HR_NAV : REHAB_NAV)
   }
-
+  
   if (userRole === 'owner' && activeModule === 'hr') {
     // Insert CEO Portal before general HR Portal settings
     const ceoItem = { to: '/hr/ceo', label: 'CEO Portal', icon: ShieldCheck }
@@ -76,8 +79,8 @@ export default function Sidebar() {
         {!collapsed && <span className="logo-text">MediHR</span>}
       </div>
 
-      {/* Module Switcher - Hide for Employees */}
-      {userRole !== 'employee' && (
+      {/* Module Switcher - Hide for Employees and Managers */}
+      {userRole !== 'employee' && userRole !== 'manager' && (
         !collapsed ? (
           <div className="sidebar-module-switcher">
             <button

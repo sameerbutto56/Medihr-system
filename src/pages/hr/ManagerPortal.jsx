@@ -8,7 +8,7 @@ import {
 import { formatDate } from '../../utils/helpers'
 
 export default function ManagerPortal() {
-  const { userData } = useAuth()
+  const { currentUser, userData } = useAuth()
   const { 
     hrEmployees, hrTasks, hrDepartments, 
     addTask, updateTask, deleteTask, assignToTeam 
@@ -19,8 +19,8 @@ export default function ManagerPortal() {
   
   // 1. Identify my staff
   const myTeam = useMemo(() => 
-    hrEmployees.filter(e => e.managerId === userData?.authUid),
-    [hrEmployees, userData]
+    hrEmployees.filter(e => e.managerId === currentUser?.uid),
+    [hrEmployees, currentUser]
   )
 
   const myDept = useMemo(() => 
@@ -29,15 +29,36 @@ export default function ManagerPortal() {
   )
 
   // 2. Identify available employees (same branch, not assigned to me, not assigned to others)
-  const availableEmployees = useMemo(() => 
-    hrEmployees.filter(e => e.branchId === userData?.branchId && !e.managerId && !e.isManager),
-    [hrEmployees, userData]
-  )
+  // 2. Identify available employees (Same branch, same department, unmanaged)
+  const availableEmployees = useMemo(() => {
+    const myDeptName = myDept?.name?.toLowerCase()
+    
+    // First try: Same Branch + Same Department
+    const sameDept = hrEmployees.filter(e => 
+      e.branchId === userData?.branchId && 
+      e.department?.toLowerCase() === myDeptName &&
+      !e.managerId && 
+      !e.isManager
+    )
+
+    if (sameDept.length > 0) return sameDept
+
+    // Fallback: Show all unmanaged staff in the same branch if department match is empty
+    return hrEmployees.filter(e => 
+      e.branchId === userData?.branchId && 
+      !e.managerId && 
+      !e.isManager
+    )
+  }, [hrEmployees, userData, myDept])
 
   const myTasks = useMemo(() => 
-    hrTasks.filter(t => t.assignedBy === userData?.authUid),
-    [hrTasks, userData]
+    hrTasks.filter(t => t.assignedBy === currentUser?.uid),
+    [hrTasks, currentUser]
   )
+
+  const assignablePeople = useMemo(() => {
+    return [...myTeam, ...availableEmployees]
+  }, [myTeam, availableEmployees])
 
   // ── Render: Team Hub ──────────────────────────────────────────────────────
   if (activeTab === 'team') {
@@ -97,7 +118,7 @@ export default function ManagerPortal() {
                     </div>
                     <button 
                       className="btn btn-primary btn-sm" 
-                      onClick={() => assignToTeam(e.id, userData.authUid)}
+                      onClick={() => assignToTeam(e.id, currentUser.uid)}
                     >
                       Add to Team
                     </button>
@@ -180,10 +201,10 @@ export default function ManagerPortal() {
 
       {showTaskForm && (
         <TaskForm 
-          team={myTeam} 
+          team={assignablePeople} 
           onClose={() => setShowTaskForm(false)} 
           onSubmit={(data) => {
-            addTask({ ...data, assignedBy: userData.authUid })
+            addTask({ ...data, assignedBy: currentUser.uid })
             setShowTaskForm(false)
           }}
         />
@@ -274,7 +295,7 @@ function TaskForm({ team, onClose, onSubmit }) {
                 >
                   <option value="">-- Select Member --</option>
                   {team.map(m => (
-                    <option key={m.id} value={m.authUid}>{m.name}</option>
+                    <option key={m.id} value={m.id}>{m.name}</option>
                   ))}
                 </select>
               </div>

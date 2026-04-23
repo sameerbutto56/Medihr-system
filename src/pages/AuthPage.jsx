@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db, firebaseConfig } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { Lock, Mail, User, KeyRound, ShieldAlert, Building2, Users, Stethoscope, ChevronLeft } from 'lucide-react';
+import { Lock, Mail, User, KeyRound, ShieldAlert, Building2, Users, Stethoscope, ChevronLeft, ClipboardList } from 'lucide-react';
 
 export default function AuthPage() {
   const [selectedRole, setSelectedRole] = useState(null); // 'ceo', 'hr', 'employee'
@@ -22,6 +22,7 @@ export default function AuthPage() {
   const PORTAL_TO_ROLE = {
     ceo: 'owner',
     hr: 'hr',
+    manager: 'manager',
     employee: 'employee'
   };
 
@@ -76,7 +77,7 @@ export default function AuthPage() {
 
       if (actualRole !== expectedRole) {
         // Role mismatch — never sign in, just show the error
-        const portalNames = { owner: 'CEO / Owner', hr: 'HR Manager', employee: 'Employee' };
+        const portalNames = { owner: 'CEO / Owner', hr: 'HR Manager', manager: 'Department Head', employee: 'Employee' };
         setError(`This account is registered as "${portalNames[actualRole] || 'Unknown'}". Please use the correct portal to sign in.`);
         setLoading(false);
         return;
@@ -84,7 +85,15 @@ export default function AuthPage() {
 
       // Step 3: Role matches — now do the real Firebase sign in
       await login(email, password);
-      navigate(selectedRole === 'employee' ? '/me' : '/hr');
+      
+      // Navigate to correct portal
+      if (selectedRole === 'employee') {
+        navigate('/me');
+      } else if (selectedRole === 'manager') {
+        navigate('/hr/manager');
+      } else {
+        navigate('/hr');
+      }
     } catch (err) {
       setError(err.message || 'Failed to authenticate');
     }
@@ -141,6 +150,21 @@ export default function AuthPage() {
               <p className="text-muted text-sm" style={{ margin: 0 }}>Manage employees, payroll, and attendance.</p>
             </div>
 
+            {/* Manager Portal Card */}
+            <div 
+              className="card" 
+              onClick={() => handleRoleSelect('manager')}
+              style={{ cursor: 'pointer', padding: '40px 20px', textAlign: 'center', transition: 'transform 0.2s, box-shadow 0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.05)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+            >
+              <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(99,102,241,0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <ClipboardList size={32} />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 8px 0' }}>Department Head</h3>
+              <p className="text-muted text-sm" style={{ margin: 0 }}>Manage your team and assign workflows.</p>
+            </div>
+
             {/* Employee Portal Card */}
             <div 
               className="card" 
@@ -188,6 +212,7 @@ export default function AuthPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
           background: selectedRole === 'ceo' ? 'linear-gradient(135deg, var(--primary), var(--primary-light))' :
                       selectedRole === 'hr' ? 'linear-gradient(135deg, var(--green), #4ade80)' :
+                      selectedRole === 'manager' ? 'linear-gradient(135deg, var(--primary), #818cf8)' :
                       'linear-gradient(135deg, var(--amber), #fbbf24)'
         }}>
           <Lock size={30} />
@@ -267,7 +292,7 @@ export default function AuthPage() {
             disabled={loading}
             style={{ 
               width: '100%', padding: '14px', marginTop: '10px', justifyContent: 'center',
-              backgroundColor: selectedRole === 'ceo' ? 'var(--primary)' : selectedRole === 'hr' ? 'var(--green)' : 'var(--amber)' 
+              backgroundColor: selectedRole === 'ceo' ? 'var(--primary)' : selectedRole === 'hr' ? 'var(--green)' : selectedRole === 'manager' ? 'var(--primary)' : 'var(--amber)' 
             }}
           >
             {loading ? 'Authenticating...' : (isLogin ? 'Sign In' : 'Create Owner Account')}

@@ -22,10 +22,11 @@ async function seed() {
   console.log("🌱 Starting seed...");
 
   // 1. Get the first branch (should already exist)
-  const branchSnap = await getDocs(collection(db, "branches"));
+  let branchSnap = await getDocs(collection(db, "branches"));
   if (branchSnap.empty) {
-    console.log("❌ No branches found. Login to the app first so branches get auto-created.");
-    process.exit(1);
+    console.log("📍 No branches found. Creating a default branch...");
+    await addDoc(collection(db, 'branches'), { name: 'Main Branch', createdAt: new Date().toISOString() });
+    branchSnap = await getDocs(collection(db, "branches"));
   }
   const branchId = branchSnap.docs[0].id;
   const branchName = branchSnap.docs[0].data().name;

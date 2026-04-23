@@ -13,6 +13,7 @@ import {
   where,
   limit,
   getDocs,
+  getDoc,
   writeBatch
 } from 'firebase/firestore'
 
@@ -183,9 +184,28 @@ export function AppProvider({ children }) {
   const deleteTask = useCallback((id) => deleteDoc(doc(db, 'tasks', id)), [])
 
   const promoteToManager = useCallback(async (empId, deptId) => {
-    // 1. Update Employee record
-    await updateDoc(doc(db, 'employees', empId), { isManager: true, managedDepartmentId: deptId })
-    // 2. Optionally update User record role if needed, but we rely on employee flags for now
+    // 1. Get Employee record to find authUid
+    const empRef = doc(db, 'employees', empId)
+    const empSnap = await getDoc(empRef)
+    
+    if (!empSnap.exists()) throw new Error("Employee not found")
+    const empData = empSnap.data()
+
+    // 2. Update Employee record
+    await updateDoc(empRef, { 
+      isManager: true, 
+      managedDepartmentId: deptId,
+      role: 'Manager' // Explicitly change the role string
+    })
+    
+    // 3. Update User record role if authUid exists
+    if (empData.authUid) {
+      await updateDoc(doc(db, 'users', empData.authUid), { 
+        role: 'manager',
+        branchId: empData.branchId,
+        managedDepartmentId: deptId
+      })
+    }
   }, [])
 
   const assignToTeam = useCallback(async (empId, managerId) => {

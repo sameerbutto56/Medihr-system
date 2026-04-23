@@ -434,10 +434,11 @@ function HRAccountManagement() {
 
 export default function CEOPortal() {
   const { userRole } = useAuth()
-  const { allUsers, updateUser, branches, hrEmployees, updateEmployee } = useApp()
+  const { allUsers, updateUser, branches, hrEmployees, hrDepartments, updateEmployee, promoteToManager } = useApp()
   const [editingUser, setEditingUser] = useState(null)
   const [editForm, setEditForm] = useState({})
   const handleOpenEdit = (user) => {
+    if (!user) return
     setEditingUser(user)
     setEditForm({
       displayName: user.displayName || '',
@@ -538,6 +539,114 @@ export default function CEOPortal() {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Managers Directory */}
+      <div className="mt-8 mb-8">
+        <div className="section-header">
+          <h2 className="section-title flex items-center gap-2">
+            <ShieldCheck size={20} className="text-primary" /> Active Manager Directory
+          </h2>
+          <p className="section-sub">Quick overview of all appointed department managers</p>
+        </div>
+
+        <div className="card overflow-hidden">
+          <table className="w-100" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg-hover)', textAlign: 'left' }}>
+                <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Manager Name</th>
+                <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Assigned Department</th>
+                <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Contact Details</th>
+                <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hrEmployees.filter(e => e.isManager).map(manager => {
+                const dept = hrDepartments.find(d => d.id === manager.managedDepartmentId)
+                return (
+                  <tr key={manager.id} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td style={{ padding: '16px' }}>
+                      <div className="flex items-center gap-3">
+                        <div className="avatar" style={{ width: 32, height: 32, fontSize: 12 }}>
+                          {(manager.name || '').split(' ').map(n=>n[0]).join('').toUpperCase()}
+                        </div>
+                        <div className="fw-700">{manager.name || 'Unnamed Manager'}</div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px' }}>
+                      <div className="badge badge-primary">{dept?.name || 'Global / Unassigned'}</div>
+                    </td>
+                    <td style={{ padding: '16px' }}>
+                      <div className="text-sm">{manager.loginEmail || manager.email}</div>
+                      <div className="text-xs text-muted">{manager.phone}</div>
+                      {(allUsers || []).find(u => u.id === manager.authUid)?.role !== 'manager' && manager.authUid && (
+                        <div className="badge badge-danger mt-1" style={{ fontSize: '10px' }}>Portal Access Outdated</div>
+                      )}
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'right' }}>
+                      <div className="flex flex-col gap-2 items-end">
+                        {(allUsers || []).find(u => u.id === manager.authUid)?.role !== 'manager' && manager.authUid && (
+                          <button 
+                            className="btn btn-primary btn-xs" 
+                            onClick={async () => {
+                              try {
+                                await promoteToManager(manager.id, manager.managedDepartmentId)
+                                alert("Portal access fixed! The manager can now log in.")
+                              } catch (err) {
+                                alert("Fix failed: " + err.message)
+                              }
+                            }}
+                          >
+                            Fix Portal Access
+                          </button>
+                        )}
+                        {manager.authUid ? (
+                        <button 
+                          className="btn btn-ghost btn-sm" 
+                          onClick={() => {
+                            const user = (allUsers || []).find(u => u.id === manager.authUid)
+                            if (user) {
+                              handleOpenEdit(user)
+                            } else {
+                              alert("System account not found. It may have been deleted or is still loading.")
+                            }
+                          }}
+                        >
+                          Manage Account
+                        </button>
+                      ) : (
+                        <button 
+                          className="btn btn-primary btn-sm" 
+                          onClick={() => {
+                            setForm({
+                              ...form,
+                              name: manager.name,
+                              email: manager.loginEmail || '',
+                              phone: manager.phone || ''
+                            })
+                            // Scroll to registration form
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                            alert("Filling registration form with manager's details. Please complete the password and branch to create their account.")
+                          }}
+                        >
+                          Create Account
+                        </button>
+                      )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {hrEmployees.filter(e => e.isManager).length === 0 && (
+                <tr>
+                  <td colSpan="4" style={{ padding: '40px', textAlign: 'center' }} className="text-muted">
+                    No managers have been appointed yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
