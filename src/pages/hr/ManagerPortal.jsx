@@ -16,6 +16,7 @@ export default function ManagerPortal() {
   
   const [activeTab, setActiveTab] = useState('tasks') // 'tasks' or 'team'
   const [showTaskForm, setShowTaskForm] = useState(false)
+  const [filterStaff, setFilterStaff] = useState('all')
   
   // 1. Identify my staff
   const myTeam = useMemo(() => 
@@ -51,10 +52,13 @@ export default function ManagerPortal() {
     )
   }, [hrEmployees, userData, myDept])
 
-  const myTasks = useMemo(() => 
-    hrTasks.filter(t => t.assignedBy === currentUser?.uid),
-    [hrTasks, currentUser]
-  )
+  const myTasks = useMemo(() => {
+    let tasks = hrTasks.filter(t => t.assignedBy === currentUser?.uid)
+    if (filterStaff !== 'all') {
+      tasks = tasks.filter(t => t.assignedTo === filterStaff)
+    }
+    return tasks
+  }, [hrTasks, currentUser, filterStaff])
 
   const assignablePeople = useMemo(() => {
     return [...myTeam, ...availableEmployees]
@@ -85,16 +89,26 @@ export default function ManagerPortal() {
                       </div>
                       <div>
                         <div className="fw-700">{m.name}</div>
-                        <div className="text-xs text-muted">{m.role}</div>
+                        <div className="text-xs text-muted mb-1">{m.role}</div>
+                        <div className="flex gap-2">
+                          <span className="badge badge-success" style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {hrTasks.filter(t => t.assignedTo === m.id && t.status === 'completed').length} Done
+                          </span>
+                          <span className="badge badge-warning" style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {hrTasks.filter(t => t.assignedTo === m.id && t.status !== 'completed').length} Pending
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <button 
-                      className="btn btn-ghost btn-sm text-danger" 
-                      onClick={() => assignToTeam(m.id, null)}
-                      title="Remove from team"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setActiveTab('tasks')}
+                        title="View tasks"
+                      >
+                        <ClipboardList size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -137,15 +151,59 @@ export default function ManagerPortal() {
     <div className="animate-in">
       <PortalHeader activeTab={activeTab} setActiveTab={setActiveTab} deptName={myDept?.name} />
       
+      {/* Team Stats Summary */}
+      <div className="grid-3 gap-4 mt-6">
+        <div className="card p-4 flex items-center gap-4 border-l-4 border-primary">
+          <div className="p-3 bg-primary-light rounded-lg text-primary">
+            <ClipboardList size={24} />
+          </div>
+          <div>
+            <div className="text-2xl fw-800">{myTasks.length}</div>
+            <div className="text-xs text-muted fw-600 uppercase">Total Team Tasks</div>
+          </div>
+        </div>
+        <div className="card p-4 flex items-center gap-4 border-l-4 border-green">
+          <div className="p-3 bg-green-light rounded-lg text-green">
+            <CheckCircle2 size={24} />
+          </div>
+          <div>
+            <div className="text-2xl fw-800">{myTasks.filter(t => t.status === 'completed').length}</div>
+            <div className="text-xs text-muted fw-600 uppercase">Completed</div>
+          </div>
+        </div>
+        <div className="card p-4 flex items-center gap-4 border-l-4 border-warning">
+          <div className="p-3 bg-warning-light rounded-lg text-warning">
+            <Clock size={24} />
+          </div>
+          <div>
+            <div className="text-2xl fw-800">{myTasks.filter(t => t.status !== 'completed').length}</div>
+            <div className="text-xs text-muted fw-600 uppercase">Pending Review</div>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-8">
         <div className="section-header flex justify-between items-center bg-hover p-4 rounded-xl border border-border">
           <div>
             <h3 className="section-title mb-0">Assigned Work</h3>
             <p className="section-sub">Tracking progress and workflow for your staff</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowTaskForm(true)}>
-            <Send size={15} /> Assign New Work
-          </button>
+          <div className="flex gap-3">
+            <select 
+              className="form-control" 
+              style={{ width: 'auto', minWidth: '180px' }}
+              value={filterStaff}
+              onChange={e => setFilterStaff(e.target.value)}
+            >
+              <option value="all">All Staff Members</option>
+              {myTeam.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+            <button className="btn btn-primary" onClick={() => setShowTaskForm(true)}>
+              <Send size={15} /> Assign New Work
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 card overflow-hidden">
@@ -166,7 +224,7 @@ export default function ManagerPortal() {
                 </tr>
               ) : (
                 myTasks.map(t => {
-                  const assignee = myTeam.find(m => m.authUid === t.assignedTo) || hrEmployees.find(e => e.authUid === t.assignedTo)
+                  const assignee = hrEmployees.find(e => e.id === t.assignedTo)
                   return (
                     <tr key={t.id} style={{ borderTop: '1px solid var(--border)' }}>
                       <td style={{ padding: '16px' }}>

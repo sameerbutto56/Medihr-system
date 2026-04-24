@@ -98,11 +98,22 @@ export default function EmployeeDetails({ employee, onClose }) {
                 display: 'flex', flexDirection: 'column', gap: '8px'
               }}>
                 <label className="text-xs text-muted" style={{ fontWeight: 700, textTransform: 'uppercase' }}>CNIC / ID Number</label>
-                <div style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '1px', color: 'var(--primary)' }}>
-                  {employee.cnic || 'NOT REGISTERED'}
+                <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '2px', fontFamily: 'monospace' }}>
+                  {employee.cnic || 'NOT PROVIDED'}
                 </div>
-                <div className="text-xs text-muted">
-                  This ID is used for official identity verification and internal records.
+              </div>
+
+              <h3 className="section-title" style={{ fontSize: '16px', margin: '24px 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Shield size={18} /> System Account Credentials
+              </h3>
+              <div style={{ background: 'rgba(99, 102, 241, 0.05)', padding: '20px', borderRadius: '12px', border: '1px solid var(--primary-light)' }}>
+                <div className="mb-2">
+                  <label className="text-xs text-muted fw-700 uppercase">Login Email</label>
+                  <div style={{ fontWeight: 600, color: 'var(--primary)' }}>{employee.loginEmail || 'No account created'}</div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted fw-700 uppercase">System Password</label>
+                  <div style={{ fontWeight: 600, fontFamily: 'monospace' }}>{employee.loginPassword || '••••••••'}</div>
                 </div>
               </div>
             </div>

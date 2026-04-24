@@ -82,6 +82,16 @@ export default function Employees() {
       render: (e) => <span className={`badge ${e.status}`}>{e.status}</span>,
     },
     {
+      label: 'Credentials',
+      key: 'loginEmail',
+      render: (e) => (
+        <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
+          <div className="fw-700" style={{ color: 'var(--primary-light)' }}>{e.loginEmail || 'No Email'}</div>
+          <div className="text-muted" style={{ fontFamily: 'monospace' }}>{e.loginPassword || '••••••••'}</div>
+        </div>
+      )
+    },
+    {
       label: 'Actions', key: 'id',
       render: (e) => (
         <div className="flex gap-2">
